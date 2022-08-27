@@ -15,6 +15,43 @@ using std::unordered_map;
 // Conversion between KiloBytes and MegoBytes
 #define KB_MB 1000.0
 
+// Common functions
+template <typename T>
+T findValueByKey(std::string const &keyFilter, std::string const &filename) {
+  std::string line, key;
+  T value;
+
+  std::ifstream stream(LinuxParser::kProcDirectory + filename);
+  if (stream.is_open()) {
+    while (std::getline(stream, line)) {
+      std::istringstream linestream(line);
+      while (linestream >> key >> value) {
+        if (key == keyFilter) {
+          stream.close();
+          return value;
+        }
+      }
+    }
+    stream.close();
+  }
+  return value;
+};
+
+template <typename T>
+T getValueOfFile(std::string const &filename) {
+  std::string line;
+  T value;
+
+  std::ifstream stream(LinuxParser::kProcDirectory + filename);
+  if (stream.is_open()) {
+    std::getline(stream, line);
+    std::istringstream linestream(line);
+    linestream >> value;
+    stream.close();
+  }
+  return value;
+};
+
 // DONE: An example of how to read data from the filesystem
 string LinuxParser::OperatingSystem() {
   string line;
@@ -80,26 +117,19 @@ float LinuxParser::MemoryUtilization() {
     MemCached = Cached + SReclaimable - Shmem
     MemUtilization = 100*(MemTotal - MemFree - (Buffers + MemCached))/MemTotal
   */
-  string line, key, value, unit;
-  unordered_map<string,float> meminfo;
-  std::ifstream filestream(kProcDirectory + kMeminfoFilename);
-  if (filestream.is_open()) {
-    while (std::getline(filestream, line)) {
-      std::replace(line.begin(), line.end(), ':', ' ');
-      std::istringstream linestream(line);
-      while (linestream >> key >> value >> unit) {
-        if (key == "MemTotal" || key == "MemFree" || key == "Buffers" \
-        || key == "Cached" || key == "SReclaimable" || key == "Shmem") {
-          meminfo[key] = stof(value)/KB_MB; // value in MB
-        }
-      }
-    }
-    filestream.close();
-  }
-  if (meminfo["MemTotal"] != 0) {
-    return (meminfo["MemTotal"] - meminfo["MemFree"] - (meminfo["Buffers"] \
-    + meminfo["Cached"] + meminfo["SReclaimable"] - meminfo["Shmem"]))/meminfo["MemTotal"];
-  }
+  string memTotal = "MemTotal:";
+  string memFree = "MemFree:";
+  string buffers = "Buffers";
+  string cached = "Cached";
+  string sreclaimanle = "SReclaimable";
+  string shmem = "Shmem";
+  float Total = findValueByKey<float>(memTotal, kMeminfoFilename);// "/proc/memInfo"
+  float Free = findValueByKey<float>(memFree, kMeminfoFilename) + \
+  findValueByKey<float>(buffers, kMeminfoFilename) + \
+  findValueByKey<float>(shmem, kMeminfoFilename) - \
+  findValueByKey<float>(cached, kMeminfoFilename) - \
+  findValueByKey<float>(sreclaimanle, kMeminfoFilename);
+  if (Total != 0.0) { return (Total - Free) / Total; }
   return 0.0;
 }
 
@@ -172,16 +202,7 @@ int LinuxParser::RunningProcesses() {
 
 // Read and return the command associated with a process
 string LinuxParser::Command(int pid) { 
-  string p_id{"/" + to_string(pid) + "/"};
-  string line;
-  std::ifstream filestream(kProcDirectory + p_id + kCmdlineFilename);
-  if (filestream.is_open()) {
-    std::getline(filestream, line);
-    std::istringstream linestream(line);
-    filestream.close();
-    return linestream.str();
-  }
-  return string();
+  return std::string(getValueOfFile<std::string>(std::to_string(pid) + kCmdlineFilename));
 }
 
 // Read and return the memory used by a process
