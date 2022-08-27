@@ -30,10 +30,12 @@ string LinuxParser::OperatingSystem() {
       while (linestream >> key >> value) {
         if (key == "PRETTY_NAME") {
           std::replace(value.begin(), value.end(), '_', ' ');
+          filestream.close();
           return value;
         }
       }
     }
+    filestream.close();
   }
   return value;
 }
@@ -42,11 +44,12 @@ string LinuxParser::OperatingSystem() {
 string LinuxParser::Kernel() {
   string os, kernel, version;
   string line;
-  std::ifstream stream(kProcDirectory + kVersionFilename);
-  if (stream.is_open()) {
-    std::getline(stream, line);
+  std::ifstream filestream(kProcDirectory + kVersionFilename);
+  if (filestream.is_open()) {
+    std::getline(filestream, line);
     std::istringstream linestream(line);
     linestream >> os >> version >> kernel;
+    filestream.close();
   }
   return kernel;
 }
@@ -63,7 +66,7 @@ vector<int> LinuxParser::Pids() {
       string filename(file->d_name);
       if (std::all_of(filename.begin(), filename.end(), isdigit)) {
         int pid = stoi(filename);
-        pids.push_back(pid);
+        pids.emplace_back(pid);
       }
     }
   }
@@ -91,6 +94,7 @@ float LinuxParser::MemoryUtilization() {
         }
       }
     }
+    filestream.close();
   }
   if (meminfo["MemTotal"] != 0) {
     return (meminfo["MemTotal"] - meminfo["MemFree"] - (meminfo["Buffers"] \
@@ -107,6 +111,7 @@ long LinuxParser::UpTime() {
     std::getline(filestream, line);
     std::istringstream linestream(line);
     linestream >> uptime >> idle;
+    filestream.close();
   }
   return stol(uptime);
 }
@@ -120,8 +125,9 @@ vector<string> LinuxParser::CpuUtilization() {
     std::getline(filestream, line);
     std::istringstream linestream(line);
     while (linestream >> cpuTime) {
-      if (cpuTime != "cpu") { cpuTimes.push_back(cpuTime); }
+      if (cpuTime != "cpu") { cpuTimes.emplace_back(cpuTime); }
     }
+    filestream.close();
   }
   return cpuTimes;
 }
@@ -134,9 +140,13 @@ int LinuxParser::TotalProcesses() {
     while (std::getline(filestream, line)) {
       std::istringstream linestream(line);
       while (linestream >> key >> value) {
-        if (key == "processes") { return stoi(value); }
+        if (key == "processes") { 
+          filestream.close();
+          return stoi(value);
+        }
       }
     }
+    filestream.close();
   }
   return 0;
 }
@@ -149,9 +159,13 @@ int LinuxParser::RunningProcesses() {
     while (std::getline(filestream, line)) {
       std::istringstream linestream(line);
       while (linestream >> key >> value) {
-        if (key == "procs_running") { return stoi(value); }
+        if (key == "procs_running") { 
+          filestream.close();
+          return stoi(value);
+        }
       }
     }
+    filestream.close();
   }
   return 0;
 }
@@ -164,6 +178,7 @@ string LinuxParser::Command(int pid) {
   if (filestream.is_open()) {
     std::getline(filestream, line);
     std::istringstream linestream(line);
+    filestream.close();
     return linestream.str();
   }
   return string();
@@ -179,13 +194,21 @@ string LinuxParser::Ram(int pid) {
       std::replace(line.begin(), line.end(), ':', ' ');
       std::istringstream linestream(line);
       while (linestream >> key >> value) {
-        if (key == "VmSize") {
+        /* 
+          Using VmRSS instead of VmSize
+          https://man7.org/linux/man-pages/man5/proc.5.html
+          As per link, VmSize is sum or size of all virtual memory.
+          Whereas, VmRSS is exact physical memory as part of RAM.
+        */
+        if (key == "VmRSS") {
           long value_kb = stol(value);
           long value_mb = value_kb/KB_MB; // Value in MB
+          filestream.close();
           return to_string(value_mb);
         }
       }
     }
+    filestream.close();
   }
   return string();
 }
@@ -200,9 +223,13 @@ string LinuxParser::Uid(int pid) {
       std::replace(line.begin(), line.end(), ':', ' ');
       std::istringstream linestream(line);
       while (linestream >> key >> value) {
-        if (key == "Uid") { return value; }
+        if (key == "Uid") { 
+          filestream.close();
+          return value;
+        }
       }
     }
+    filestream.close();
   }
   return string(); 
 }
@@ -218,10 +245,14 @@ string LinuxParser::User(int pid) {
       std::replace(line.begin(), line.end(), ':', ' ');
       std::istringstream linestream(line);
       while (linestream >> userInfo) {
-        userInfos.push_back(userInfo);
-        if (userInfo == uid) { return userInfos[0];}
+        userInfos.emplace_back(userInfo);
+        if (userInfo == uid) { 
+          filestream.close();
+          return userInfos[0];
+        }
       }
     }
+    filestream.close();
   }
   return string();
 }
@@ -236,9 +267,14 @@ long LinuxParser::UpTime(int pid) {
   if (filestream.is_open()) {
     std::getline(filestream, line);
     std::istringstream linestream(line);
-    while (linestream >> statInfo) { statInfos.push_back(statInfo); }
+    while (linestream >> statInfo) { statInfos.emplace_back(statInfo); }
+    filestream.close();
   }
-  if (statInfos.size() > 21) { upTime = (stol(statInfos[21]))/sysconf(_SC_CLK_TCK); }
+  if (statInfos.size() > 21) { 
+    // Subtract process start time after system boot from system uptime
+    upTime = LinuxParser::UpTime() - \
+    (stol(statInfos[21]))/sysconf(_SC_CLK_TCK);
+  }
   return upTime;
 }
 
@@ -251,7 +287,8 @@ vector<string> LinuxParser::CpuUtilization(int pid) {
   if (filestream.is_open()) {
     std::getline(filestream, line);
     std::istringstream linestream(line);
-    while (linestream >> statInfo) { statInfos.push_back(statInfo); }
+    while (linestream >> statInfo) { statInfos.emplace_back(statInfo); }
+    filestream.close();
   }
   return statInfos;
 }

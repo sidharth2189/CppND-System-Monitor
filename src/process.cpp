@@ -40,7 +40,11 @@ float Process::CpuUtilization() const {
 }
 
 // Return the command that generated this process
-string Process::Command() { return LinuxParser::Command(Process::Pid()); }
+string Process::Command() { 
+    string command = LinuxParser::Command(Process::Pid());
+    // Limit command for uniformity in length of display
+    return command.substr(0,40);
+}
 
 // Return this process's memory utilization
 string Process::Ram() { return LinuxParser::Ram(Process::Pid()); }
