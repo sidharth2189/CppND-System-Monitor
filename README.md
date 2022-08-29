@@ -47,3 +47,5 @@ This project uses [Make](https://www.gnu.org/software/make/). The Makefile has f
 2. CPP Code Guidelines
   - [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)
   - [isoCPP/CppCoreGuidelines](https://github.com/isocpp/CppCoreGuidelines)
+
+3. [Linux manual page](https://man7.org/linux/man-pages/man5/proc.5.html)
