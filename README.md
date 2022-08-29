@@ -42,8 +42,8 @@ This project uses [Make](https://www.gnu.org/software/make/). The Makefile has f
 
 ## Additional links
 1. Useful stack overflow links for this project.
-  - [Memory calculation in HTOP](https://stackoverflow.com/questions/41224738/how-to-calculate-system-memory-usage-from-proc-meminfo-like-htop/41251290#41251290
-  - [Process CPU utilization](https://stackoverflow.com/questions/16726779/how-do-i-get-the-total-cpu-usage-of-an-application-from-proc-pid-stat/16736599#16736599
+  - [Memory calculation in HTOP](https://stackoverflow.com/questions/41224738/how-to-calculate-system-memory-usage-from-proc-meminfo-like-htop/41251290#41251290)
+  - [Process CPU utilization](https://stackoverflow.com/questions/16726779/how-do-i-get-the-total-cpu-usage-of-an-application-from-proc-pid-stat/16736599#16736599)
   - [System CPU utilization](https://stackoverflow.com/questions/23367857/accurate-calculation-of-cpu-usage-given-in-percentage-in-linux)
 
 2. CPP Code Guidelines
